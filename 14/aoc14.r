@@ -7,7 +7,8 @@
 library(tidyverse)
 
 # Get Input
-input <- readLines("C:/Users/hxzzm/Desktop/git/Advent-of-Code-2023/14/input.txt")
+dirname(rstudioapi::getActiveDocumentContext()$path)
+input <- readLines(paste0(dirname(rstudioapi::getActiveDocumentContext()$path), "/input.txt"))
 
 # Turn into df
 
@@ -20,7 +21,7 @@ for(i in 1:length(input)){
 
 
 # Initalise vector
-summary <- vector()
+summary <- 0
 
 # Run for loop 
 for(i in 1:ncol(df)){
@@ -31,18 +32,19 @@ round <- which(col1 == "O")
 square <- which(col1 == "#") + 1
 roll_possible <- unique(c(1,square))
 
-# Roll desintation 
+# Roll destination 
 blind_roll <- findInterval(round, roll_possible)
 
 adjusted_roll <- roll_possible[pmax(1, blind_roll)] + 
   ave(seq_along(ave(seq_along(blind_roll))), blind_roll, FUN = function(x) seq_along(x) - 1)
 
-
+value = sum(101 - adjusted_roll)
+summary = summary + value
 
 }
 
 # Part 1 Answer
-(101-summary) %>% sum()
+summary
 
 
 # Part 2 ------------------------------------------------------------------
