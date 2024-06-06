@@ -5,6 +5,7 @@
 
 # Packages 
 library(tidyverse)
+library(memoise)
 
 # Get Input
 dirname(rstudioapi::getActiveDocumentContext()$path)
@@ -18,7 +19,6 @@ df <- data.frame(matrix(nrow = nchar(input[1]),
 for(i in 1:length(input)){
   df[i,] <- str_split_1(input[i], "")
 }
-
 
 # Initalise vector
 summary <- 0
@@ -47,75 +47,74 @@ summary = summary + value
 summary
 
 
-# Part 2 ------------------------------------------------------------------
+
+
+
+
 
 # Part 2 ------------------------------------------------------------------
-rotate <- function(x) t(apply(x, 2, rev))
-empty_lit = list()
+library(memoise)
 
+# Define functions
+rotate <- memoise(function(mat) t(apply(mat, 2, rev))) 
+line_drop <- memoise(function(col1) {
+  round <- which(col1 == "O") 
+  square <- which(col1 == "#") + 1
+  roll_possible <- unique(c(1, square))
+  blind_roll <- findInterval(round, roll_possible)
+  adjusted_roll <- roll_possible[pmax(1, blind_roll)] + ave(seq_along(blind_roll), blind_roll, FUN = function(x) seq_along(x) - 1)
+  col2 <- gsub("O", ".", col1)
+  col2[adjusted_roll] <- "O"
+  return(col2)
+})
 
-counter = 0
-mat <- as.matrix(df)
-
-#Find break
-
-repeat{
-  
-  for(i in 1:ncol(df)){
-    
-    col1 <- mat[,i]
-    
-    round <- which(col1 == "O") 
-    square <- which(col1 == "#") + 1
-    roll_possible <- unique(c(1,square))
-    
-    # Roll desintation 
-    blind_roll <- findInterval(round, roll_possible)
-    
-    adjusted_roll <- roll_possible[pmax(1, blind_roll)] + 
-      ave(seq_along(ave(seq_along(blind_roll))), blind_roll, FUN = function(x) seq_along(x) - 1)
-    
-    col1[col1 == "O"] <- "."
-    col1[adjusted_roll] <- "O" 
-    
-    mat[,i] <- col1
+drop_rocks <- memoise(function(mat) {
+  for(i in 1:ncol(mat)) {
+    mat[, i] <- line_drop(mat[, i])
   }
-  counter = counter + 1
+  return(mat)
+})
+
+# Run 
+counter <- 0
+mat <- as.matrix(data.frame(matrix(unlist(strsplit(input, "")), nrow = nchar(input), byrow = TRUE)))
+mat_list <- list(mat)
+flag <- TRUE
+
+while (flag) {
+  loop <- 0
+  counter <- counter + 1
   
-  if(counter %% 4){
-    empty_lit <- c(empty_lit, list(mat))
-    
-    predefined_matrix <- empty_lit[[1]]
-    
-    is_equal <- sapply(empty_lit, function(mat) identical(mat, predefined_matrix))
-    
-    if(sum(is_equal) > 1){
-      print(counter)
-      break
+  while (loop < 4) {
+    loop <- loop + 1
+    mat <- drop_rocks(mat)
+    mat <- rotate(mat)
+  }
+  
+  for (i in 1:length(mat_list)) {
+    maty <- mat_list[[i]]
+    if (identical(maty, mat)) {
+      start_loop = i
+      end_loop = counter - 1
+      flag <- FALSE  # Set flag to FALSE to exit the outer loop
     }
-    
   }
   
-  
-  
-  
-  
-  if(counter == 4000000000){
-    break
-  }
-  mat <- rotate(mat)
-  
-  
+  mat_list <- c(mat_list, list(mat))  # Update mat_list inside the loop
 }
 
+loop_length = end_loop  - start_loop + 2
+table_index = (1000000000 - start_loop) %% loop_length + 1
+mat = mat_list[[table_index + start_loop]]
+summary <- 0
 
+for(i in 1:ncol(mat)) {
+  col1 <- mat[, i]
+  square <- which(col1 == "O") 
+  value <- sum(101 - square)
+  summary <- summary + value
+}
 
-predefined_matrix <- empty_lit[[3]]
+print(summary)
 
-
-# Check which matrices in the list are equal to the predefined matrix
-is_equal <- sapply(empty_lit, function(mat) identical(mat, predefined_matrix))
-
-which(is_equal == TRUE)
-sum(is_equal)
 
